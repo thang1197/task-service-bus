@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sb-emulator-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Thang123456"
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opt/mssql-tools18/bin/sqlcmd",
+          "-S",
+          "localhost",
+          "-U",
+          "sa",
+          "-P",
+          "Thang123456",
+          "-Q",
+          "SELECT 1"
+        ]
+      interval: 10s
+      retries: 10
+
+  servicebus:
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    container_name: sb-emulator
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+    ports:
+      - "5672:5672"
+      - "5300:5300"
+
+    environment:
+      ACCEPT_EULA: "Y"
+      SQL_SERVER: sqlserver
+      SQL_PASSWORD: "Thang123456"
+      MSSQL_SA_PASSWORD: "Thang123456"
+
+    volumes:
+    - ./config/Config.json:/ServiceBus_Emulator/ConfigFiles/Config.json

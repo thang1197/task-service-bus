@@ -1,0 +1,44 @@
+<!--
+    IMPORTANT:
+    - Policy elements can appear only within the <inbound>, <outbound>, <backend> section elements.
+    - Only the <forward-request> policy element can appear within the <backend> section element.
+    - To apply a policy to the incoming request (before it is forwarded to the backend service), place
+a corresponding policy element within the <inbound> section element.
+    - To apply a policy to the outgoing response (before it is sent back to the caller), place a
+corresponding policy element within the <outbound> section element.
+    - To add a policy position the cursor at the desired insertion point and click on the round button
+associated with the policy.
+    - To remove a policy, delete the corresponding policy statement from the policy document.
+    - Policies are applied in the order of their appearance, from the top down.
+-->
+<policies>
+    <inbound>
+        <validate-azure-ad-token tenant-id="c814e86b-f58d-42a5-bc89-d446a886e056">
+            <client-application-ids>
+                <application-id>18b03cb2-0463-44dc-9ce6-50e641df38c5</application-id>
+            </client-application-ids>
+            <audiences>
+                <audience>api://18b03cb2-0463-44dc-9ce6-50e641df38c5</audience>
+            </audiences>
+        </validate-azure-ad-token>
+        <choose>
+            <when condition="@(context.Response.StatusCode == 401)">
+                <return-response>
+                    <set-status code="401" />
+                    <set-body>@{
+                        JObject response = new JObject();
+                        response["status"] = "401";
+                        response["message"] = "You are unauthorized";
+
+                        return response.ToString();
+                        }</set-body>
+                </return-response>
+            </when>
+        </choose>
+    </inbound>
+    <backend>
+        <forward-request />
+    </backend>
+    <outbound />
+    <on-error />
+</policies>
