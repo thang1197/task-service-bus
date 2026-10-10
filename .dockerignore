@@ -4,4 +4,4 @@ bin/
 obj/
 .git/
 .vs/
-test.json
+./test.json
