@@ -23,7 +23,7 @@ namespace TaskManagementServiceBusApi.Worker.Service
         public async Task<WorkerResult> StartAsync()
         {
             _logger.LogInformation(
-                "[{Id}] StartAsyncs",
+                "[{Id}] StartAsyncss",
                 _id);
             var workerResult = new WorkerResult
             {
