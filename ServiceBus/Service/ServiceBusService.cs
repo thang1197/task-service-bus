@@ -90,12 +90,14 @@ namespace TaskManagementServiceBusApi.ServiceBus.Service
                 var message = new ServiceBusMessage
                 {
                     CorrelationId = Guid.NewGuid().ToString(),
-                    MessageId = Guid.NewGuid().ToString(),
+                    MessageId = messageRequest.IdempotencyKey ?? Guid.NewGuid().ToString(),
                     Body = new BinaryData(messageRequest.Payload.GetRawText()),
                     ContentType = "application/json",
                     Subject = messageRequest.Subject,
                     SessionId = messageRequest.SessionId,
                 };
+
+                _logger.LogInformation("Sending message to Service Bus: {MessageId}, Subject: {Subject}, SessionId: {SessionId}", message.MessageId, message.Subject, message.SessionId);
                 await _sender.SendMessageAsync(message, cts.Token);
             }
             catch (Exception ex)
@@ -290,6 +292,57 @@ namespace TaskManagementServiceBusApi.ServiceBus.Service
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while retrieving messages from queue {QueueName}", queueName);
+                throw;
+            }
+        }
+
+        public async Task<List<MessageResponse>> GetMessagesFromSubscriptionAsync(string topicName, string subscriptionName, int maxMessageCount, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var receiver = _serviceBusClient.CreateReceiver(topicName, subscriptionName);
+                var messages = await receiver.PeekMessagesAsync(maxMessageCount, cancellationToken: cancellationToken, fromSequenceNumber: 0);
+
+                var messageResponses = messages.Select(message => new MessageResponse
+                {
+                    MessageId = message.MessageId,
+                    Body = message.Body.ToString(),
+                    ContentType = message.ContentType,
+                    CorrelationId = message.CorrelationId
+                }).ToList();
+
+                return messageResponses;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving messages from subscription {SubscriptionName} for topic {TopicName}", subscriptionName, topicName);
+                throw;
+            }
+        }
+
+        public async Task<List<MessageResponse>> GetMessageFromSubscriptionDLQAsync(string topicName, string subscriptionName, int maxMessageCount, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var receiver = _serviceBusClient.CreateReceiver(topicName, subscriptionName, new ServiceBusReceiverOptions
+                {
+                    SubQueue = SubQueue.DeadLetter
+                });
+                var messages = await receiver.PeekMessagesAsync(maxMessageCount, cancellationToken: cancellationToken, fromSequenceNumber: 0);
+
+                var messageResponses = messages.Select(message => new MessageResponse
+                {
+                    MessageId = message.MessageId,
+                    Body = message.Body.ToString(),
+                    ContentType = message.ContentType,
+                    CorrelationId = message.CorrelationId
+                }).ToList();
+
+                return messageResponses;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving messages from subscription {SubscriptionName} for topic {TopicName}", subscriptionName, topicName);
                 throw;
             }
         }

@@ -15,11 +15,10 @@ namespace TaskManagementServiceBusApi.File.DTO
         public string FileType { get; set; } = string.Empty;
         public int TaskId { get; set; } = 0;
         public int ProjectId { get; set; } = 0;
+        public string UserCreated { get; set; } = string.Empty;
 
-        public required string UserCreated { get; set; }
+        public string UserUpdated { get; set; } = string.Empty;
 
-        public required string UserUpdated { get; set; }
-
-        public required string Url { get; set; }
+        public string Url { get; set; } = string.Empty;
     }
 }

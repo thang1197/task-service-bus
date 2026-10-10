@@ -8,7 +8,5 @@ namespace TaskManagementServiceBusApi.AI.Worker
 {
     public interface IAIWorker : ISubscriberWorkerService
     {       
-        public Task StartAsync(CancellationToken cancellationToken);
-        public Task StopAsync(CancellationToken cancellationToken);
     }
 }

@@ -214,5 +214,35 @@ namespace TaskManagementServiceBusApi.ServiceBus.Controller
                 return HttpHelper.GenerateErrorResponse(ex.Message);
             }
         }
+
+        [HttpGet("subscriptions-messages")]
+        public async Task<IActionResult> GetMessagesFromSubscription([FromQuery] string topicName, [FromQuery] string subscriptionName, [FromQuery] int maxMessageCount)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(topicName) || string.IsNullOrEmpty(subscriptionName)) return HttpHelper.GenerateErrorResponse("Topic name and Subscription name are required", StatusCodes.Status400BadRequest);
+                var messages = await _serviceBusService.GetMessagesFromSubscriptionAsync(topicName, subscriptionName, maxMessageCount, CancellationToken.None);
+                return HttpHelper.GenerateResponse(messages);
+            }
+            catch (System.Exception ex)
+            {
+                return HttpHelper.GenerateErrorResponse(ex.Message);
+            }
+        }
+
+        [HttpGet("subscriptions-messages-dlq")]
+        public async Task<IActionResult> GetMessageFromSubscriptionDLQ([FromQuery] string topicName, [FromQuery] string subscriptionName, [FromQuery] int maxMessageCount)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(topicName) || string.IsNullOrEmpty(subscriptionName)) return HttpHelper.GenerateErrorResponse("Topic name and Subscription name are required", StatusCodes.Status400BadRequest);
+                var messages = await _serviceBusService.GetMessageFromSubscriptionDLQAsync(topicName, subscriptionName, maxMessageCount, CancellationToken.None);
+                return HttpHelper.GenerateResponse(messages);
+            }
+            catch (System.Exception ex)
+            {
+                return HttpHelper.GenerateErrorResponse(ex.Message);
+            }
+        }
     }
 }

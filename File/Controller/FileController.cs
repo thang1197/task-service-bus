@@ -4,15 +4,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using TaskManagementServiceBusApi.File.Service;
+using TaskManagementServiceBusApi.File.Worker;
 using TaskManagementServiceBusApi.Helper;
 
 namespace TaskManagementServiceBusApi.File.Controller
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class FileController(ILogger<FileController> logger, IFileService fileService) : ControllerBase
+    public class FileController(ILogger<FileController> logger, IFileWorker fileWorker) : ControllerBase
     {
-        private readonly IFileService _fileService = fileService;
+        private readonly IFileWorker _fileWorker = fileWorker;
         private readonly ILogger<FileController> _logger = logger;
         [HttpPost("start")]
         public async Task<IActionResult> StartAuditAsync()
@@ -20,7 +21,7 @@ namespace TaskManagementServiceBusApi.File.Controller
             try
             {
                 // Implement the logic to start the audit process here
-                var result = await _fileService.StartAsync();
+                var result = await _fileWorker.StartAsync();
                 return HttpHelper.GenerateResponse(result, StatusCodes.Status202Accepted);
             }
             catch (Exception ex)
@@ -36,7 +37,7 @@ namespace TaskManagementServiceBusApi.File.Controller
             try
             {
                 // Implement the logic to stop the audit process here
-                var result = await _fileService.StopAsync();
+                var result = await _fileWorker.StopAsync();
                 return HttpHelper.GenerateResponse(result, StatusCodes.Status202Accepted);
             }
             catch (Exception ex)

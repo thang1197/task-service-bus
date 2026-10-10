@@ -99,5 +99,15 @@ namespace TaskManagementServiceBusApi.Worker.Service
                 throw;
             }
         }
+
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

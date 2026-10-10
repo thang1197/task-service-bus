@@ -37,5 +37,9 @@ namespace TaskManagementServiceBusApi.ServiceBus.Service
         public Task<List<MessageResponse>> GetMessagesFromQueueAsync(string queueName, int maxMessageCount, CancellationToken cancellationToken);
 
         public Task<List<MessageResponse>> GetMessageFromQueuesDLQAsync(string queueName, int maxMessageCount, CancellationToken cancellationToken);
+    
+        public Task<List<MessageResponse>> GetMessagesFromSubscriptionAsync(string topicName, string subscriptionName, int maxMessageCount, CancellationToken cancellationToken);
+
+        public Task<List<MessageResponse>> GetMessageFromSubscriptionDLQAsync(string topicName, string subscriptionName, int maxMessageCount, CancellationToken cancellationToken);
     }
 }

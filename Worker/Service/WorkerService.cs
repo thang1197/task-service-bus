@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using TaskManagementServiceBusApi.Configuration;
+using TaskManagementServiceBusApi.Helper;
 using TaskManagementServiceBusApi.Worker.DTO;
 
 namespace TaskManagementServiceBusApi.Worker.Service
@@ -94,7 +95,8 @@ namespace TaskManagementServiceBusApi.Worker.Service
         {
             try
             {
-                while(!cancellationToken.IsCancellationRequested)
+                var counter = 0;
+                while (!cancellationToken.IsCancellationRequested || counter < 3)
                 {
                     var timeToLockExpiration = message.LockedUntil - DateTimeOffset.UtcNow;
                     if (timeToLockExpiration <= TimeSpan.FromSeconds(10))
@@ -104,6 +106,7 @@ namespace TaskManagementServiceBusApi.Worker.Service
                         _logger.LogInformation("Lock renewed for message: {MessageId}", message.MessageId);
                     }
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                    counter++;
                 }
             }
             catch (Exception ex)
@@ -129,82 +132,57 @@ namespace TaskManagementServiceBusApi.Worker.Service
                 ServiceBusReceivedMessage message = await _receiver.ReceiveMessageAsync(
                     // maxWaitTime: TimeSpan.FromSeconds(30),
                     cancellationToken: _cts.Token);
-                
+
                 if (_state == State.Stopped)
                 {
                     _logger.LogInformation("Worker service is stopping. Exiting message processing loop.");
                     break;
                 }
+
+                _logger.LogInformation(
+                   "Receive returned. Null = {Null}, MessageId = {MessageId}, LockDuration = {LockDuration}, ExpiresAt = {ExpiresAt}",
+                   message == null,
+                   message?.MessageId,
+                   message?.LockedUntil,
+                   message?.ExpiresAt);
+
+                if (message == null)
+                {
+                    _logger.LogInformation("No message received. Continuing to wait...");
+                    continue;
+                }
+
                 var renewalLockCancellationTokenSource = new CancellationTokenSource();
                 try
                 {
-
-                    _logger.LogInformation(
-                    "Receive returned. Null = {Null}, MessageId = {MessageId}, LockDuration = {LockDuration}, ExpiresAt = {ExpiresAt}",
-                    message == null,
-                    message?.MessageId,
-                    message?.LockedUntil,
-                    message?.ExpiresAt);
-
-                    if (message == null)
-                    {
-                        _logger.LogInformation("No message received. Continuing to wait...");
-                        continue;
-                    }
 
                     _logger.LogInformation("Processing message: {MessageId}", message.MessageId);
                     _logger.LogInformation("Message body: {MessageBody}", message.Body);
                     var renewalLockTask = Task.Run(() => RenewalLockAsync(message, renewalLockCancellationTokenSource.Token));
 
                     await HandleMessageAsync(message, _cts.Token);
-                    // Stop the lock renewal task after processing the message
-                    renewalLockCancellationTokenSource.Cancel();
                     await _receiver.CompleteMessageAsync(message);
-                }
-                catch (OperationCanceledException ex)
-                {
-                    // Expected when stopping the worker
-                    _logger.LogInformation(ex, "Worker is stopping.");
-                    break;
-                }
-                catch (TransientException ex)
-                {
-                    _logger.LogWarning(ex, "TransientException occurred while processing message.");
-                    await _receiver.AbandonMessageAsync(message);
-                }
-                catch (ServiceBusException ex)
-                {
-                    switch (ex.Reason)
-                    {
-                        case ServiceBusFailureReason.ServiceTimeout:
-                            _logger.LogWarning(ex, "Service timeout occurred while processing message.");
-                            break;
-                        case ServiceBusFailureReason.MessageLockLost:
-                            _logger.LogWarning(ex, "Message lock lost while processing message.");
-                            await _receiver.AbandonMessageAsync(message);
-                            break;
-                        default:
-                            _logger.LogError(ex, "ServiceBusException occurred while processing message.");
-                            break;
-                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error occurred while processing message.");
-
-                    if (message != null)
+                    var kind = FailureClassifier.Classify(ex);
+                    if (kind == FailureKind.Transient)
                     {
-                        try
-                        {
-                            // await _receiver.AbandonMessageAsync(message);
-                            renewalLockCancellationTokenSource.Cancel();
-                            await _receiver.DeadLetterMessageAsync(message, "ProcessingError", ex.Message);
-                        }
-                        catch (Exception abandonEx)
-                        {
-                            _logger.LogError(abandonEx, "Failed to abandon message.");
-                        }
+                        _logger.LogWarning("Transient error occurred. Abandoning message. Error message: {ErrorMessage}", ex.Message);
+                        await Task.Delay(TimeSpan.FromSeconds(5), _cts.Token);
+                        await _receiver.AbandonMessageAsync(message);
                     }
+                    else
+                    {
+                        _logger.LogError("Non-transient error occurred. Dead-lettering message.");
+                        await _receiver.DeadLetterMessageAsync(message, "ProcessingError", ex.Message);
+                    }
+                }
+                finally
+                {
+                    renewalLockCancellationTokenSource.Cancel();
+                    _logger.LogInformation("Renewal lock cancellation requested: {IsCancellationRequested}", renewalLockCancellationTokenSource.Token.IsCancellationRequested);
                 }
             }
         }

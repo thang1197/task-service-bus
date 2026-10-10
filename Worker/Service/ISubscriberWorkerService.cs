@@ -11,6 +11,10 @@ namespace TaskManagementServiceBusApi.Worker.Service
         public Task SubscribeAsync(CancellationToken cancellationToken);
         public Task UnsubscribeAsync(CancellationToken cancellationToken);
 
+        public Task StartAsync(CancellationToken cancellationToken);
+
+        public Task StopAsync(CancellationToken cancellationToken);
+
         public Task<List<Message>> GetMessagesAsync(int maxMessageCount, CancellationToken cancellationToken);
         
     }

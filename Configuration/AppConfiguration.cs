@@ -64,4 +64,31 @@ namespace TaskManagementServiceBusApi.Configuration
 
         public string ConnectionString { get; set; } = string.Empty;
     }
+
+    public class RedisSettings
+    {
+       public const string SectionName = "Redis";
+
+        public string Url { get; set; } = string.Empty;
+
+        public string Password { get; set; } = string.Empty;
+
+        public int Port { get; set; }
+
+        public string Username { get; set; } = string.Empty;
+    }
+
+    public class AICoreServiceConfiguration
+    {
+        public const string SectionName = "AICoreService";
+
+        public string BaseUrl { get; set; } = string.Empty;
+    }
+
+    public class FunctionAppCoreConfiguration
+    {
+        public const string SectionName = "FunctionAppCore";
+
+        public string BaseUrl { get; set; } = string.Empty;
+    }
 }

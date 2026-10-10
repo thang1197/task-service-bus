@@ -12,5 +12,7 @@ namespace TaskManagementServiceBusApi.ServiceBus.DTO
         public JsonElement Payload { get; set; } = JsonElement.Parse("{}");
         public required string Subject { get; set; } = string.Empty;
         public string SessionId { get; set; } = string.Empty;
+
+        public string IdempotencyKey { get; set; } = string.Empty;
     }
 }

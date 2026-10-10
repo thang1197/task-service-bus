@@ -8,13 +8,50 @@
             "Name": "tasks",
             "Subscriptions": [
               {
-                "Name": "task-summary-worker",
+                "Name": "ai-summary",
                 "MaxDeliveryCount": 3,
                 "RequiresSession": true,
-                "DeadLetteringOnMessageExpiration": false,
+                "DeadLetteringOnMessageExpiration": true,
+                "DefaultMessageTimeToLive": "PT1H"
+              },
+              {
+                "Name": "ai-knowledge-data",
+                "MaxDeliveryCount": 3,
+                "RequiresSession": true,
+                "DeadLetteringOnMessageExpiration": true,
+                "DefaultMessageTimeToLive": "PT1H"
+              },
+              {
+                "Name": "ai-delivery",
+                "MaxDeliveryCount": 3,
+                "RequiresSession": true,
+                "DeadLetteringOnMessageExpiration": true,
+                "DefaultMessageTimeToLive": "PT1H"
+              },
+              {
+                "Name": "audit-log",
+                "MaxDeliveryCount": 3,
+                "RequiresSession": true,
+                "DeadLetteringOnMessageExpiration": true,
                 "DefaultMessageTimeToLive": "PT1H"
               }
             ]
+          }
+        ],
+        "Queues": [
+          {
+            "Name": "files",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "DuplicateDetectionHistoryTimeWindow": "PT20S",
+              "ForwardDeadLetteredMessagesTo": "",
+              "ForwardTo": "",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 3,
+              "RequiresDuplicateDetection": false,
+              "RequiresSession": false
+            }
           }
         ]
       }

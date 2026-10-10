@@ -9,26 +9,41 @@ using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Resources;
+using SharedCommon.Cache.Service;
+using SharedCommon.Configuration;
+using SharedCommon.CoreApi;
+using SharedCommon.CoreApi.Files.Service;
+using StackExchange.Redis;
+using TaskManagementServiceBusApi.AI.AIKnowledgeData.Service;
+using TaskManagementServiceBusApi.AI.AIKnowledgeData.Worker;
 using TaskManagementServiceBusApi.AI.Worker;
+using TaskManagementServiceBusApi.AICoreService;
+using TaskManagementServiceBusApi.AICoreService.Service;
 using TaskManagementServiceBusApi.Audit.Service;
+using TaskManagementServiceBusApi.Cache.Service;
 using TaskManagementServiceBusApi.Configuration;
-using TaskManagementServiceBusApi.Configuration.TaskManagementApi;
 using TaskManagementServiceBusApi.Credential.Service;
 using TaskManagementServiceBusApi.Email.Service;
 using TaskManagementServiceBusApi.File.Service;
+using TaskManagementServiceBusApi.File.Worker;
+using TaskManagementServiceBusApi.FunctionAppCore;
+using TaskManagementServiceBusApi.FunctionAppCore.Storage.Service;
 using TaskManagementServiceBusApi.Helper;
 using TaskManagementServiceBusApi.ServiceBus.Service;
 using TaskManagementServiceBusApi.Worker.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var configurationManager = new CustomConfigurationManager(builder);
-await configurationManager.Initialize();
+var configurationManager = new CustomConfigurationManager();
+await configurationManager.InitializeConfigurationAsync(builder);
 
-builder.Services.AddSingleton(x =>
-{
-    return configurationManager.GetAzureCredential();
-});
+// CredentialCache
+builder.Services.AddSingleton<ICredentialCache, CredentialCache>();
+
+// builder.Services.AddSingleton(x =>
+// {
+//     return configurationManager.GetAzureCredential();
+// });
 
 
 // Handle configuration
@@ -47,37 +62,7 @@ builder.Services.Configure<StorageAccountConfiguration>(x =>
     x.ContainerName = storageAccountConfiguration.ContainerName;
 });
 
-builder.Services.Configure<AzureAdSettings>(x =>
-{
-    var azureAdSettings = configurationManager.GetAzureAdSettings();
-    x.Instance = azureAdSettings.Instance;
-    x.TenantId = azureAdSettings.TenantId;
-    x.ClientId = azureAdSettings.ClientId;
-});
-
-builder.Services.Configure<ApiManagementConfiguration>(x =>
-{
-    var apiManagementConfiguration = configurationManager.GetApiManagementConfiguration();
-    x.BaseUrl = apiManagementConfiguration.BaseUrl;
-});
-
-builder.Services.ConfigureHttpClientDefaults(builder =>
-{
-    builder.ConfigureHttpClient((sp, client) =>
-    {
-        var config = sp.GetRequiredService<IOptions<ApiManagementConfiguration>>().Value;
-        client.BaseAddress = new Uri(config.BaseUrl);
-    });
-});
-
 builder.Services.AddHttpClient();
-
-// Task Management API Service Http Client
-builder.Services.AddHttpClient<ITaskManagementApiService, TaskManagementApiService>(client =>
-{
-    var config = builder.Configuration.GetSection(ApiManagementConfiguration.SectionName).Get<ApiManagementConfiguration>();
-    client.BaseAddress = new Uri(config?.BaseUrl ?? string.Empty);
-});
 
 // Credential Manager
 builder.Services.AddSingleton<ICredentialManager>(sp =>
@@ -90,29 +75,64 @@ builder.Services.AddSingleton<ICredentialManager>(sp =>
 // Service Bus Client
 builder.Services.AddSingleton(sp =>
 {
-    var serviceBusConfiguration = sp.GetRequiredService<IOptions<ServiceBusConfiguration>>().Value;
+    var serviceBusConfiguration = configurationManager.GetServiceBusConfiguration();
+    Console.WriteLine("ServiceBus ConnectionString: " + serviceBusConfiguration.ConnectionString);
     return new ServiceBusClient(serviceBusConfiguration.ConnectionString);
 });
 
 // Storage Account Client
 builder.Services.AddSingleton(sp =>
 {
-    var storageAccountConfiguration = sp.GetRequiredService<IOptions<StorageAccountConfiguration>>().Value;
+    var storageAccountConfiguration = configurationManager.GetStorageAccountConfiguration();
     Console.WriteLine("StorageAccount ConnectionString: " + storageAccountConfiguration.ConnectionString);
     return new BlobServiceClient(storageAccountConfiguration.ConnectionString);
 });
 
 builder.Services.AddControllers();
 
+// Function App Core
+builder.Services.AddHttpClient<FunctionAppCoreHttpClient>(opts =>
+{
+    opts.Timeout = TimeSpan.FromSeconds(20);
+    opts.BaseAddress = new Uri(configurationManager.GetFunctionAppCoreConfiguration().BaseUrl);
+});
+builder.Services.AddSingleton<IFunctionAppCoreStorageService, FunctionAppCoreStorageService>();
+
+
 // Add services to the container.
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IServiceBusService, ServiceBusService>();
 builder.Services.AddSingleton<IAuditService, AuditService>();
-builder.Services.AddSingleton<IFileService, FileStorageService>();
 
-// Worker
-builder.Services.AddSingleton<AISummaryWorker>();
-builder.Services.AddSingleton<AIDeliveryWorker>();
+// Core Api Serivce
+builder.Services.AddHttpClient<CoreApiHttpClient>(opts =>
+{
+    var coreApiBaseUrl = configurationManager.GetApiManagementConfiguration().BaseUrl;
+    Console.WriteLine("Core API BaseUrl: " + coreApiBaseUrl);
+    opts.BaseAddress = new Uri(coreApiBaseUrl);
+    opts.Timeout = TimeSpan.FromSeconds(20);
+});
+builder.Services.AddSingleton<ICoreApiFileService, CoreApiFileService>();
+
+// File
+builder.Services.AddSingleton<IFileStorageService, FileStorageService>();
+builder.Services.AddSingleton<IFileWorker, FileWorker>();
+
+// AI Service
+var aiServiceBaseUrl = configurationManager.GetAICoreServiceConfiguration().BaseUrl;
+builder.Services.AddHttpClient<AICoreServiceHttpClient>(opts =>
+{
+    Console.WriteLine("AI Service BaseUrl: " + aiServiceBaseUrl);
+    opts.BaseAddress = new Uri(aiServiceBaseUrl);
+    opts.Timeout = TimeSpan.FromSeconds(20);
+});
+builder.Services.AddSingleton<IAIService, AIService>();
+
+
+// AI Knowledge Data Worker
+builder.Services.AddSingleton<IAIKnowledgeService, AIKnowledgeService>();
+builder.Services.AddSingleton<IAIKnowledgeDataWorker, AIKnowledgeDataWorker>();
+
 
 builder.Services.AddSingleton(sp =>
 {
@@ -126,13 +146,12 @@ builder.Services.AddSingleton(sp =>
     return adminClient;
 });
 
-
 // Application Insights
 builder.Services
 .AddOpenTelemetry()
 .UseAzureMonitor(options =>
 {
-    var applicationInsightsConfigurtion = configurationManager.GetApplicationInsightsConfigurtion();
+    var applicationInsightsConfigurtion = configurationManager.GetApplicationInsightConfiguration();
     Console.WriteLine("ApplicationInsights ConnectionString: " + applicationInsightsConfigurtion.ConnectionString);
     options.ConnectionString = applicationInsightsConfigurtion.ConnectionString;
 })

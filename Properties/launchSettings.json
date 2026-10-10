@@ -7,7 +7,16 @@
       "launchBrowser": true,
       "applicationUrl": "http://localhost:5024",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "LocalDevelopment": "true",
+        "Redis__Url": "guided-squirrel-154214.upstash.io",
+        "Redis__Password": "gQAAAAAAAlpmAAIgcDFhYWI0ZGVkMTQ1ZmQ0OWM5YTM5YmU2NmRjYmI5Mjk0Ng",
+        "Redis__Database": "0",
+        "Redis__Ssl": "true",
+        "Redis__Tls": "true",
+        "Redis__Port": "6379",
+        "Redis__Username": "default",
+        "ApiManagement__SubscriptionKey": "f3e5c1d0b4e14a2f9c8b4e1d9f8c4e1d"
       }
     },
     "https": {
