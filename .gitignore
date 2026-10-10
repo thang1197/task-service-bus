@@ -2,3 +2,4 @@ bin/
 obj/
 appsettings.Development.json
 Properties/
+test.json
