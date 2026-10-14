@@ -13,7 +13,9 @@ namespace TaskManagementServiceBusApi.Configuration
     public class ServiceBusConfiguration
     {
         public const string SectionName = "ServiceBus";
-        public const string KeyVaultSecretKey = "ServiceBusConnectionString";
+        public const string KeyVaultSecretKey = "ServiceBusStandardConnectionString";
+
+        public const string KeyVaultAdminSecretKey = "ServiceBusStandardAdminConnectionString";
         public string ConnectionString { get; set; } = string.Empty;
         public string QueueName { get; set; } = string.Empty;
 
@@ -88,6 +90,13 @@ namespace TaskManagementServiceBusApi.Configuration
     public class FunctionAppCoreConfiguration
     {
         public const string SectionName = "FunctionAppCore";
+
+        public string BaseUrl { get; set; } = string.Empty;
+    }
+
+    public class CoreApiConfiguration
+    {
+        public const string SectionName = "CoreApi";
 
         public string BaseUrl { get; set; } = string.Empty;
     }

@@ -16,11 +16,9 @@ using SharedCommon.CoreApi.Files.Service;
 using StackExchange.Redis;
 using TaskManagementServiceBusApi.AI.AIKnowledgeData.Service;
 using TaskManagementServiceBusApi.AI.AIKnowledgeData.Worker;
-using TaskManagementServiceBusApi.AI.Worker;
 using TaskManagementServiceBusApi.AICoreService;
 using TaskManagementServiceBusApi.AICoreService.Service;
 using TaskManagementServiceBusApi.Audit.Service;
-using TaskManagementServiceBusApi.Cache.Service;
 using TaskManagementServiceBusApi.Configuration;
 using TaskManagementServiceBusApi.Credential.Service;
 using TaskManagementServiceBusApi.Email.Service;
@@ -39,6 +37,7 @@ await configurationManager.InitializeConfigurationAsync(builder);
 
 // CredentialCache
 builder.Services.AddSingleton<ICredentialCache, CredentialCache>();
+// builder.Services.AddSingleton<IDistributedCache, RedisCache>();
 
 // builder.Services.AddSingleton(x =>
 // {
@@ -107,7 +106,7 @@ builder.Services.AddSingleton<IAuditService, AuditService>();
 // Core Api Serivce
 builder.Services.AddHttpClient<CoreApiHttpClient>(opts =>
 {
-    var coreApiBaseUrl = configurationManager.GetApiManagementConfiguration().BaseUrl;
+    var coreApiBaseUrl = configurationManager.GetCoreApiConfiguration().BaseUrl;
     Console.WriteLine("Core API BaseUrl: " + coreApiBaseUrl);
     opts.BaseAddress = new Uri(coreApiBaseUrl);
     opts.Timeout = TimeSpan.FromSeconds(20);

@@ -115,7 +115,8 @@ namespace TaskManagementServiceBusApi.Worker.Service
             try
             {
                 _cancellationTokenSource?.Cancel();
-                if (_workerTask != null)
+                _logger.LogInformation("Token cancellation requested: {IsCancellationRequested}", _cancellationTokenSource?.Token.IsCancellationRequested);
+                if (_workerTask != null && !_workerTask.IsCompleted)
                 {
                     await _workerTask;
                 }

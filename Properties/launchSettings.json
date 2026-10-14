@@ -7,7 +7,7 @@
       "launchBrowser": true,
       "applicationUrl": "http://localhost:5024",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_ENVIRONMENT": "Production",
         "LocalDevelopment": "true",
         "Redis__Url": "guided-squirrel-154214.upstash.io",
         "Redis__Password": "gQAAAAAAAlpmAAIgcDFhYWI0ZGVkMTQ1ZmQ0OWM5YTM5YmU2NmRjYmI5Mjk0Ng",
@@ -16,7 +16,8 @@
         "Redis__Tls": "true",
         "Redis__Port": "6379",
         "Redis__Username": "default",
-        "ApiManagement__SubscriptionKey": "f3e5c1d0b4e14a2f9c8b4e1d9f8c4e1d"
+        "ApiManagement__SubscriptionKey": "f3e5c1d0b4e14a2f9c8b4e1d9f8c4e1d",
+        "ApplicationInsight__ConnectionString": "InstrumentationKey=30a13ecd-26ee-44f5-a37e-1c59a0398cbb;IngestionEndpoint=https://southeastasia-1.in.applicationinsights.azure.com/;LiveEndpoint=https://southeastasia.livediagnostics.monitor.azure.com/;ApplicationId=900cedf9-9f09-43a1-8cd7-2e857be53af1"
       }
     },
     "https": {
