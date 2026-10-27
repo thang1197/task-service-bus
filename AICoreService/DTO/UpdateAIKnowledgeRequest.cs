@@ -12,12 +12,11 @@ namespace TaskManagementServiceBusApi.AICoreService.DTO
         public int ProjectId { get; set; }
 
         public ActivityType? Type { get; set; }
-        public string? Content { get; set; }
 
         public int TaskId { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
-        public Dictionary<string, string>? Metadata { get; set; } = [];
+        public Metadata? Metadata { get; set; }
     }
 }

@@ -6,6 +6,8 @@ namespace TaskManagementServiceBusApi.AICoreService.Service
     {
         private readonly ILogger<AIService> _logger = logger;
         private readonly AICoreServiceHttpClient _aiCoreServiceHttpClient = aiCoreServiceHttpClient;
+
+        private readonly string _aiKnowledgeUrl = "ai-knowledge";
         public async Task<AIKnowledgeResponse> CreateAIKnowledge(CreateAIKnowledgeRequest data)
         {
             try
@@ -14,7 +16,7 @@ namespace TaskManagementServiceBusApi.AICoreService.Service
                 {
                     Method = HttpMethod.Post,
                     Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(data), System.Text.Encoding.UTF8, "application/json"),
-                    RequestUri = new Uri("aisummary/knowledge", UriKind.Relative)
+                    RequestUri = new Uri(_aiKnowledgeUrl, UriKind.Relative)
                 };
                 var result = await _aiCoreServiceHttpClient.SendAsync<AIKnowledgeResponse>(request) ?? throw new Exception("AIKnowledgeResponse is null.");
                 return result;
@@ -34,7 +36,7 @@ namespace TaskManagementServiceBusApi.AICoreService.Service
                 {
                     Method = HttpMethod.Patch,
                     Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(data), System.Text.Encoding.UTF8, "application/json"),
-                    RequestUri = new Uri("aisummary/knowledge/" + data.Id, UriKind.Relative)
+                    RequestUri = new Uri(_aiKnowledgeUrl + "/" + data.Id, UriKind.Relative)
                 };
                 var result = await _aiCoreServiceHttpClient.SendAsync<AIKnowledgeResponse>(request) ?? throw new Exception("AIKnowledgeResponse is null.");
                 return result;

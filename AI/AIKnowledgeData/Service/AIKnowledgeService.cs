@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using TaskManagementServiceBusApi.AI.AIKnowledgeData.DTO;
 using TaskManagementServiceBusApi.AICoreService.DTO;
@@ -14,34 +15,23 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.Service
     {
         private readonly IAIService _aiService = aiService;
         private readonly ILogger<AIKnowledgeService> _logger = logger;
-        public async Task<AIKnowledgeResponse> UpsertAIKnowledgeAsync(AIKnowledgeMessage data)
+        public async Task<AIKnowledgeResponse> UpsertAIKnowledgeAsync(AIKnowledgeMessage message)
         {
             try
             {
-                var metaData = new Dictionary<string, string>();
-                metaData = BuildMetaData(data.Type, new ActivityContext(
-                    Actor: data.Type switch
-                    {
-                        ActivityType.TaskCreated => data.UserCreated,
-                        _ => data.UserUpdated
-                    },
-                    TaskTitle: data.TaskName,
-                    From: "",
-                    To: "",
-                    Comment: "",
-                    Assignee: data.Username,
-                    NewDueDate: data.ExpirationDate
-                ));
-                
-                if (data.Type == ActivityType.TaskCreated)
+                var activityType = ConvertActionToActityType(message.Action);
+                var metaData = BuildMetaData(message);
+
+                _logger.LogInformation("Metadata: {metaData}", metaData);
+
+                if (message.Action == DTO.Action.TaskCreated)
                 {
                     var aiKnowledge = new AICoreService.DTO.CreateAIKnowledgeRequest()
                     {
-                        EventId = data.EventId,
-                        TaskId = data.Id,
-                        ProjectId = data.ProjectId,
-                        Type = data.Type,
-                        Content = "",
+                        EventId = message.EventId,
+                        TaskId = message.TaskId,
+                        ProjectId = message.ProjectId,
+                        Type = activityType,
                         Metadata = metaData
                     };
                     _logger.LogInformation("Processing aiKnowledge: {aiKnowledge}", aiKnowledge);
@@ -52,10 +42,9 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.Service
                 {
                     var aiKnowledge = new AICoreService.DTO.UpdateAIKnowledgeRequest()
                     {
-                        TaskId = data.Id,
-                        ProjectId = data.ProjectId,
-                        Type = data.Type,
-                        Content = "",
+                        TaskId = message.TaskId,
+                        ProjectId = message.ProjectId,
+                        Type = activityType,
                         Metadata = metaData
                     };
                     _logger.LogInformation("Processing aiKnowledge: {aiKnowledge}", aiKnowledge);
@@ -70,76 +59,64 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.Service
             }
         }
 
-        private Dictionary<string, string> BuildMetaData(ActivityType type, ActivityContext ctx)
+        private static Metadata BuildMetaData(AIKnowledgeMessage message)
         {
-            // Every activity type needs these two (the default branch of BuildSummaryText uses them too).
-            var metaData = new Dictionary<string, string>
+            Dictionary<string, PropertyInfo> MetadataProps =
+               typeof(Metadata)
+                   .GetProperties()
+                   .Where(p => p.PropertyType == typeof(TaskManagementServiceBusApi.AI.AIKnowledgeData.DTO.Changes)) // the metadata Changes (From/To)
+                   .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+            var metadata = new Metadata()
             {
-                [MetaKeys.Actor] = Require(ctx.Actor, nameof(ctx.Actor), type),
-                [MetaKeys.TaskTitle] = Require(ctx.TaskTitle, nameof(ctx.TaskTitle), type)
+                Actor = message.Actor,
             };
 
-            switch (type)
+            if(message.Action == DTO.Action.TaskCreated)
             {
-                case ActivityType.TaskCreated:
-                    // No extra fields.
-                    break;
-
-                case ActivityType.StatusChanged:
-                    metaData[MetaKeys.From] = Require(ctx.From, nameof(ctx.From), type);
-                    metaData[MetaKeys.To] = Require(ctx.To, nameof(ctx.To), type);
-                    break;
-
-                case ActivityType.Commented:
-                    metaData[MetaKeys.Comment] = Require(ctx.Comment, nameof(ctx.Comment), type);
-                    break;
-
-                case ActivityType.Assigned:
-                    metaData[MetaKeys.Assignee] = Require(ctx.Assignee, nameof(ctx.Assignee), type);
-                    break;
-
-                case ActivityType.DueDateChanged:
-                    if (ctx.NewDueDate is null)
-                        throw MissingValue(nameof(ctx.NewDueDate), type);
-
-                    metaData[MetaKeys.NewDueDate] =
-                        ctx.NewDueDate.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                    break;
-
-                default:
-                    // Unknown types fall back to the generic "updated task" summary.
-                    break;
+                metadata.Title = new AICoreService.DTO.Changes()
+                {
+                    From = message.TaskTitle,
+                    To = message.TaskTitle
+                };
+                return metadata;
             }
 
-            return metaData;
+            foreach (var change in message.Changes)
+            {
+                if (!MetadataProps.TryGetValue(change.Field, out var prop)) continue;
+
+                var target = (AICoreService.DTO.Changes)prop.GetValue(metadata)!;
+                target.From = ToStringValue(change.OldValue);
+                target.To = ToStringValue(change.NewValue);
+            }
+            return metadata;
         }
+
+        private static string ToStringValue(object? value) =>
+            value switch
+            {
+                null => string.Empty,
+                IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+                _ => value.ToString() ?? string.Empty
+            };
 
         private static string Require(string? value, string name, ActivityType type)
         => string.IsNullOrWhiteSpace(value) ? throw MissingValue(name, type) : value;
 
         private static ArgumentException MissingValue(string name, ActivityType type)
             => new($"'{name}' is required for activity type {type}.", name);
-    }
 
-    public static class MetaKeys
-    {
-        public const string Actor = "actor";
-        public const string TaskTitle = "taskTitle";
-        public const string From = "from";
-        public const string To = "to";
-        public const string Comment = "comment";
-        public const string Assignee = "assignee";
-        public const string NewDueDate = "newDueDate";
+        private static ActivityType ConvertActionToActityType(DTO.Action action)
+        {
+            return action switch
+            {
+                DTO.Action.TaskCreated => ActivityType.TaskCreated,
+                DTO.Action.TaskStatusChanged => ActivityType.StatusChanged,
+                DTO.Action.TaskAssigned => ActivityType.Assigned,
+                DTO.Action.TaskCommentAdded => ActivityType.Commented,
+                DTO.Action.TaskDueDateChanged => ActivityType.DueDateChanged,
+                _ => ActivityType.Unknown,
+            };
+        }
     }
-
-    // Everything a caller might know about the activity. Only the fields
-    // relevant to the ActivityType need to be filled in.
-    public sealed record ActivityContext(
-        string Actor,
-        string TaskTitle,
-        string? From = null,
-        string? To = null,
-        string? Comment = null,
-        string? Assignee = null,
-        DateTime? NewDueDate = null);
 }

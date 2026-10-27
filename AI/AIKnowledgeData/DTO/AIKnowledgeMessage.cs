@@ -9,21 +9,53 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.DTO
 {
     public class AIKnowledgeMessage
     {
-        public int Id { get; set; }
-        public string EventId { get; set; } = string.Empty;
-        public DateTime? CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-        public string? Description { get; set; }
-        public DateTime ExpirationDate { get; set; }
-        public string Username { get; set; } = string.Empty;
+        public required string Id { get; set; }
+
+        public required string EventId { get; set; } 
+        public required string TaskTitle { get; set; }
+
         public int ProjectId { get; set; }
-        public string TaskName { get; set; } = string.Empty;
-        public string Priority { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
 
-        public required string UserCreated { get; set; } = string.Empty;
-        public required string UserUpdated { get; set; } = string.Empty;
+        public int TaskId { get; set; }
 
-        public ActivityType Type { get; set; } = ActivityType.Unknown;
+        [JsonPropertyName("action")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public Action Action { get; set; }
+
+        [JsonPropertyName("actor")]
+        public required string Actor { get; set; }
+
+        [JsonPropertyName("timestamp")]
+        public DateTimeOffset Timestamp { get; set; } =
+            DateTimeOffset.UtcNow;
+
+        [JsonPropertyName("changes")]
+        public List<Changes> Changes { get; set; } = [];
+    }
+
+     public sealed class Changes
+    {
+        [JsonPropertyName("field")]
+        public string Field { get; set; } = string.Empty;
+
+        [JsonPropertyName("oldValue")]
+        public object? OldValue { get; set; }
+
+        [JsonPropertyName("newValue")]
+        public object? NewValue { get; set; }
+    }
+
+    public enum Action
+    {
+        TaskCreated,
+        TaskUpdated,
+        TaskStatusChanged,
+        TaskAssigned,
+        TaskUnassigned,
+        TaskDeleted,
+        TaskRestored,
+        TaskCommentAdded,
+        TaskAttachmentAdded,
+        TaskDueDateChanged
     }
 }
