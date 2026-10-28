@@ -7,15 +7,13 @@ namespace TaskManagementServiceBusApi.AICoreService.DTO
 {
     public class UpdateAIKnowledgeRequest
     {
-        public string Id { get; set; } = string.Empty;
+        public required string Id { get; set; }
+
+        public required string TaskTitle { get; set; }
 
         public int ProjectId { get; set; }
 
-        public ActivityType? Type { get; set; }
-
         public int TaskId { get; set; }
-
-        public DateTime CreatedAt { get; set; }
 
         public Metadata? Metadata { get; set; }
     }

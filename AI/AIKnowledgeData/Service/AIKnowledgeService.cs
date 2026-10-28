@@ -19,38 +19,21 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.Service
         {
             try
             {
-                var activityType = ConvertActionToActityType(message.Action);
                 var metaData = BuildMetaData(message);
 
                 _logger.LogInformation("Metadata: {metaData}", metaData);
 
-                if (message.Action == DTO.Action.TaskCreated)
+                var aiKnowledge = new AICoreService.DTO.CreateAIKnowledgeRequest()
                 {
-                    var aiKnowledge = new AICoreService.DTO.CreateAIKnowledgeRequest()
-                    {
-                        EventId = message.EventId,
-                        TaskId = message.TaskId,
-                        ProjectId = message.ProjectId,
-                        Type = activityType,
-                        Metadata = metaData
-                    };
-                    _logger.LogInformation("Processing aiKnowledge: {aiKnowledge}", aiKnowledge);
-                    var result = await _aiService.CreateAIKnowledge(aiKnowledge);
-                    return result;
-                }
-                else
-                {
-                    var aiKnowledge = new AICoreService.DTO.UpdateAIKnowledgeRequest()
-                    {
-                        TaskId = message.TaskId,
-                        ProjectId = message.ProjectId,
-                        Type = activityType,
-                        Metadata = metaData
-                    };
-                    _logger.LogInformation("Processing aiKnowledge: {aiKnowledge}", aiKnowledge);
-                    var result = await _aiService.UpdateAIKnowledge(aiKnowledge);
-                    return result;
-                }
+                    EventId = message.EventId,
+                    TaskId = message.TaskId,
+                    ProjectId = message.ProjectId,
+                    Metadata = metaData,
+                    TaskTitle = message.TaskTitle
+                };
+                _logger.LogInformation("Processing aiKnowledge: {aiKnowledge}", aiKnowledge);
+                var result = await _aiService.CreateAIKnowledge(aiKnowledge);
+                return result;
             }
             catch (System.Exception)
             {
@@ -71,9 +54,9 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.Service
                 Actor = message.Actor,
             };
 
-            if(message.Action == DTO.Action.TaskCreated)
+            if (message.Action == DTO.Action.TaskCreated)
             {
-                metadata.Title = new AICoreService.DTO.Changes()
+                metadata.TaskName = new AICoreService.DTO.Changes()
                 {
                     From = message.TaskTitle,
                     To = message.TaskTitle
@@ -99,24 +82,5 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.Service
                 IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
                 _ => value.ToString() ?? string.Empty
             };
-
-        private static string Require(string? value, string name, ActivityType type)
-        => string.IsNullOrWhiteSpace(value) ? throw MissingValue(name, type) : value;
-
-        private static ArgumentException MissingValue(string name, ActivityType type)
-            => new($"'{name}' is required for activity type {type}.", name);
-
-        private static ActivityType ConvertActionToActityType(DTO.Action action)
-        {
-            return action switch
-            {
-                DTO.Action.TaskCreated => ActivityType.TaskCreated,
-                DTO.Action.TaskStatusChanged => ActivityType.StatusChanged,
-                DTO.Action.TaskAssigned => ActivityType.Assigned,
-                DTO.Action.TaskCommentAdded => ActivityType.Commented,
-                DTO.Action.TaskDueDateChanged => ActivityType.DueDateChanged,
-                _ => ActivityType.Unknown,
-            };
-        }
     }
 }

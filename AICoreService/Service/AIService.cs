@@ -38,6 +38,7 @@ namespace TaskManagementServiceBusApi.AICoreService.Service
                     Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(data), System.Text.Encoding.UTF8, "application/json"),
                     RequestUri = new Uri(_aiKnowledgeUrl + "/" + data.Id, UriKind.Relative)
                 };
+                _logger.LogInformation("Updating AI knowledge: {data}", data.Id);
                 var result = await _aiCoreServiceHttpClient.SendAsync<AIKnowledgeResponse>(request) ?? throw new Exception("AIKnowledgeResponse is null.");
                 return result;
             }

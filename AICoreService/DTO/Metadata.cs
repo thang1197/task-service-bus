@@ -8,7 +8,7 @@ namespace TaskManagementServiceBusApi.AICoreService.DTO
     public class Metadata
     {
         public required string Actor { get; set; }
-        public Changes Title { get; set; } = new Changes { From = "", To = "" };
+        public Changes TaskName { get; set; } = new Changes { From = "", To = "" };
         public Changes? Assignee { get; set; }
         public Changes? ExpirationDate { get; set; }
         public Changes? Status { get; set; }

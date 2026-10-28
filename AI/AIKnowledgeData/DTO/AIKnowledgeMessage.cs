@@ -10,7 +10,7 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.DTO
     public class AIKnowledgeMessage
     {
         public required string Id { get; set; }
-
+        
         public required string EventId { get; set; } 
         public required string TaskTitle { get; set; }
 

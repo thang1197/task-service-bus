@@ -10,6 +10,8 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.DTO
     public class CreateAIKnowledgeRequest
     {
         public required string EventId { get; set; } = string.Empty;
+
+        public required string TaskTitle { get; set; }
         public int ProjectId { get; set; }
 
         public string Content { get; set; } = string.Empty;
@@ -17,7 +19,5 @@ namespace TaskManagementServiceBusApi.AI.AIKnowledgeData.DTO
         public int TaskId { get; set; }
 
         public Dictionary<string, string> Metadata { get; set; } = [];
-
-        public ActivityType Type { get; set; } = ActivityType.Unknown;
     }
 }
